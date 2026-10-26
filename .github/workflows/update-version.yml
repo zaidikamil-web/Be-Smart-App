@@ -1,0 +1,41 @@
+name: Auto Update version.json on Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  update-json:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Update version.json
+        run: |
+          TAG_NAME="${{ github.event.release.tag_name }}"
+          CLEAN_VERSION="${TAG_NAME#v}"
+          
+          # Convert version string (e.g. 1.1 -> 11 or use timestamp/numeric approach, here using release ID for versionCode)
+          VERSION_CODE="${{ github.event.release.id }}"
+          CLEAN_BODY=$(echo "${{ github.event.release.body }}" | tr '\n' ' ')
+
+          cat <<EOF > version.json
+          {
+            "versionCode": $VERSION_CODE,
+            "versionName": "$CLEAN_VERSION",
+            "apkUrl": "https://github.com/zaidikamil-web/Be-Smart-App/releases/latest/download/be-smart-app.apk",
+            "changelog": "$CLEAN_BODY"
+          }
+          EOF
+
+      - name: Commit & Push Changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions@github.com"
+          git add version.json
+          git commit -m "Auto-update version.json for release ${{ github.event.release.tag_name }}" || exit 0
+          git push
