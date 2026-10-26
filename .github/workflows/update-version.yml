@@ -13,13 +13,13 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update version.json
         run: |
           TAG_NAME="${{ github.event.release.tag_name }}"
           CLEAN_VERSION="${TAG_NAME#v}"
-          
-          # Convert version string (e.g. 1.1 -> 11 or use timestamp/numeric approach, here using release ID for versionCode)
           VERSION_CODE="${{ github.event.release.id }}"
           CLEAN_BODY=$(echo "${{ github.event.release.body }}" | tr '\n' ' ')
 
