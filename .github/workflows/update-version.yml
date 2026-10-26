@@ -12,9 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/checkout@v4
 
       - name: Update version.json
         run: |
@@ -32,10 +30,10 @@ jobs:
           }
           EOF
 
-      - name: Commit & Push Changes
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions@github.com"
-          git add version.json
-          git commit -m "Auto-update version.json for release ${{ github.event.release.tag_name }}" || exit 0
-          git push
+      - name: Commit and push changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          file_pattern: version.json
+          commit_message: "Auto-update version.json for release ${{ github.event.release.tag_name }}"
+          commit_user_name: "github-actions[bot]"
+          commit_user_email: "github-actions@github.com"
