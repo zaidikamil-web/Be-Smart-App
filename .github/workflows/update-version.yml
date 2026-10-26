@@ -37,3 +37,4 @@ jobs:
           commit_message: "Auto-update version.json for release ${{ github.event.release.tag_name }}"
           commit_user_name: "github-actions[bot]"
           commit_user_email: "github-actions@github.com"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
