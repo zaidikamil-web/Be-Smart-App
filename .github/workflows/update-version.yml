@@ -11,32 +11,48 @@ jobs:
   update-json:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Main Branch
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ref: main
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Update version.json
         run: |
           TAG_NAME="${{ github.event.release.tag_name }}"
           CLEAN_VERSION="${TAG_NAME#v}"
           VERSION_CODE="${{ github.event.release.id }}"
-          CLEAN_BODY=$(echo "${{ github.event.release.body }}" | tr '\n' ' ')
-
-          cat <<EOF > version.json
-          {
-            "versionCode": $VERSION_CODE,
-            "versionName": "$CLEAN_VERSION",
-            "apkUrl": "https://github.com/zaidikamil-web/Be-Smart-App/releases/latest/download/be-smart-app.apk",
-            "changelog": "$CLEAN_BODY"
-          }
-          EOF
+          
+          # Use 'jq' to safely generate JSON. It automatically escapes 
+          # newlines and quotes in the changelog, preventing JSON syntax errors.
+          jq -n \
+            --arg versionName "$CLEAN_VERSION" \
+            --argjson versionCode "$VERSION_CODE" \
+            --arg apkUrl "https://github.com/${{ github.repository }}/releases/latest/download/be-smart-app.apk" \
+            --arg changelog "${{ github.event.release.body }}" \
+            '{
+              versionCode: $versionCode,
+              versionName: $versionName,
+              apkUrl: $apkUrl,
+              changelog: $changelog
+            }' > version.json
 
       - name: Commit and Push Changes
         run: |
           git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions@github.com"
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Fetch and pull latest changes to prevent "non-fast-forward" Exit Code 128 errors
+          git fetch origin main
+          git checkout main
+          git pull origin main
+          
           git add version.json
-          git commit -m "Auto-update version.json for release ${{ github.event.release.tag_name }}" || exit 0
-          git push origin HEAD:main
+          
+          # Only commit and push if the file actually changed
+          if git diff --staged --quiet; then
+            echo "No changes to version.json, skipping commit."
+          else
+            git commit -m "chore: auto-update version.json for ${{ github.event.release.tag_name }}"
+            git push origin HEAD:main
+          fi
